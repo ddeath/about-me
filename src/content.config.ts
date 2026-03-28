@@ -1,20 +1,100 @@
-import { defineCollection } from 'astro:content';
-import { glob } from 'astro/loaders';
-import { z } from 'astro/zod';
+import { file, glob } from "astro/loaders";
+import { reference, z } from "astro:content";
+import { defineCollection } from "astro:content";
 
-const blog = defineCollection({
-	// Load Markdown and MDX files in the `src/content/blog/` directory.
-	loader: glob({ base: './src/content/blog', pattern: '**/*.{md,mdx}' }),
-	// Type-check frontmatter using a schema
-	schema: ({ image }) =>
-		z.object({
-			title: z.string(),
-			description: z.string(),
-			// Transform string to Date object
-			pubDate: z.coerce.date(),
-			updatedDate: z.coerce.date().optional(),
-			heroImage: z.optional(image()),
-		}),
+function slug() {
+  return z
+    .string()
+    .min(3)
+    .max(200)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/i, "Invalid slug");
+}
+
+const posts = defineCollection({
+  loader: glob({
+    pattern: "**/*.{md,mdx}",
+    base: "./src/content/posts",
+  }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string().max(128),
+      createdAt: z.coerce.date(),
+      updatedAt: z.coerce.date().optional(),
+      category: reference("categories"),
+      tags: z.array(reference("tags")).optional().default([]),
+      summary: z.string().optional().default(""),
+      cover: image().optional(),
+      draft: z.boolean().default(false),
+      new: z.boolean().default(false),
+    }),
 });
 
-export const collections = { blog };
+const projects = defineCollection({
+  loader: glob({
+    pattern: "**/*.{md,mdx}",
+    base: "./src/content/projects",
+  }),
+  schema: z.object({
+    title: z.string(),
+    description: z.string(),
+    tech: z.array(z.string()),
+    links: z.object({
+      homepage: z.string().url().optional(),
+      github: z.string().url().optional(),
+      demo: z.string().url().optional(),
+    }).optional(),
+    status: z
+      .enum(["planning", "in-progress", "completed", "archived"])
+      .default("completed"),
+    image: z.string().optional(),
+  }),
+});
+
+const categories = defineCollection({
+  loader: file("./src/content/miscs/categories.json"),
+  schema: ({ image }) =>
+    z.object({
+      name: z.string().max(32),
+      slug: slug(),
+      description: z
+        .string()
+        .max(512)
+        .optional()
+        .default("")
+        .describe("In markdown format"),
+      icon: z.string().optional().default("mdi:folder"),
+    }),
+});
+
+const tags = defineCollection({
+  loader: file("./src/content/miscs/tags.json"),
+  schema: z.object({
+    name: z.string().max(32),
+    slug: slug(),
+    description: z
+      .string()
+      .max(512)
+      .optional()
+      .default("")
+      .describe("In markdown format"),
+  }),
+});
+
+const pages = defineCollection({
+  loader: glob({
+    pattern: "**/*.{md,mdx}",
+    base: "./src/content/pages",
+  }),
+  schema: z.object({
+    title: z.string(),
+    description: z.string().optional(),
+  }),
+});
+
+export const collections = {
+  posts,
+  projects,
+  categories,
+  tags,
+  pages,
+};
