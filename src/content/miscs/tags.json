@@ -1,4 +1,5 @@
 [
+  { "name": "Daily Journal", "slug": "daily-journal" },
   { "name": "Personal Life", "slug": "personal-life" },
   { "name": "Tutorial", "slug": "tutorial" }
 ]
